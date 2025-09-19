@@ -15,6 +15,10 @@ Windows desktop application (Python 3.13 + PySide6) with dual storage: local (SQ
   ```powershell
   python -m src.app.run
   ```
+  - Recent list interactions:
+    - Double-click or press Enter to open a recent project
+    - Right-click → Open / Remove from Recent
+    - The Open Project button opens the selected recent ONLY if you explicitly selected one; otherwise it shows a file dialog
 
 - Run tests:
   ```powershell

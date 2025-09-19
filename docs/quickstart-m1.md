@@ -31,6 +31,10 @@ This guide summarizes the manual validation steps for Milestone M1. It is derive
 5) Recent projects list
 - After successful open/create, restart app
 - Expect: Recent list includes the project; duplicates removed; max 10 items
+- Interactions:
+  - Double-click or press Enter to open a recent project
+  - Right-click an item for Open / Remove from Recent
+  - Open Project button opens a file dialog unless you explicitly selected a recent item
 - Use Clear Recent; expect list is empty and persists after restart
 
 6) Logging and redaction

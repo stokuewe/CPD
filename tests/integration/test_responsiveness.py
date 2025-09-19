@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import pytest
 
+# Skip if GUI stack not available
+pytest.importorskip("PySide6")
+pytest.importorskip("pytestqt")
+
 from src.app.main_window import MainWindow
 
 

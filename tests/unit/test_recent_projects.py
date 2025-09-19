@@ -50,3 +50,13 @@ def test_recent_projects_behaviors(tmp_path, monkeypatch):
     svc.reload()
     assert all(Path(e["path"]).exists() for e in svc.list())
 
+    # Remove an entry and verify persistence and de-dup
+    to_remove = tmp_path / "proj5.sqlite"
+    svc.remove(str(to_remove))
+    remaining = svc.list()
+    assert all(Path(e["path"]).name != "proj5.sqlite" for e in remaining)
+    # Ensure persisted file also reflects removal
+    svc.reload()
+    remaining2 = svc.list()
+    assert all(Path(e["path"]).name != "proj5.sqlite" for e in remaining2)
+
