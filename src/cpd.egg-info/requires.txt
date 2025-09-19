@@ -1,0 +1,6 @@
+PySide6
+pyodbc
+
+[test]
+pytest
+pytest-qt

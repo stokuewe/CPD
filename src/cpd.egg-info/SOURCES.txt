@@ -1,0 +1,10 @@
+pyproject.toml
+src/__init__.py
+src/cpd.egg-info/PKG-INFO
+src/cpd.egg-info/SOURCES.txt
+src/cpd.egg-info/dependency_links.txt
+src/cpd.egg-info/requires.txt
+src/cpd.egg-info/top_level.txt
+src/lib/__init__.py
+src/lib/paths.py
+src/lib/redaction.py
