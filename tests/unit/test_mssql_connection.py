@@ -32,3 +32,37 @@ def test_connection_error_mapping_cert_trust():
     })
     assert kwargs.get("Encrypt", True) is True
 
+
+def test_azure_ad_connection_string_generation():
+    """Test that Azure AD connection strings include TrustServerCertificate=yes"""
+    try:
+        from src.services.db_adapters.mssql_adapter import _build_conn_str
+        from src.services.database_gateway import GatewayConfig
+    except Exception:
+        pytest.fail("MSSQL adapter not implemented yet")
+
+    # Test Azure AD Interactive
+    cfg = GatewayConfig(
+        backend="mssql",
+        server="test.database.windows.net",
+        database="testdb",
+        auth_type="azure_ad_interactive",
+        username="user@domain.com"
+    )
+    conn_str = _build_conn_str(cfg)
+
+    assert "Authentication=ActiveDirectoryInteractive" in conn_str
+    assert "TrustServerCertificate=yes" in conn_str
+    assert "Encrypt=yes" in conn_str
+
+    # Test non-Azure AD should still use TrustServerCertificate=no
+    cfg_windows = GatewayConfig(
+        backend="mssql",
+        server="test.database.windows.net",
+        database="testdb",
+        auth_type="windows"
+    )
+    conn_str_windows = _build_conn_str(cfg_windows)
+
+    assert "TrustServerCertificate=no" in conn_str_windows
+

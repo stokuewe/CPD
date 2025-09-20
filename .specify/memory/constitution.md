@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report
-- Version: N/A → 1.1.0
-- Modified principles: Core Principles populated (I–V)
+- Version: 1.2.0 → 1.3.0
+- Modified principles: none
 - Added sections:
-  • Section 2: Dual Storage Architecture (SQLite Settings + Optional MS SQL Project Data)
-  • Section 3: Technology & Constraints; Development Workflow; Storage & Migration Model; Error Handling & Observability; Security & Privacy; Versioning & Compliance; Appendices; Acceptance (summarized)
+  • Azure AD Authentication Token Management (connection lifecycle + token caching)
+- Removed sections: none
 - Templates requiring updates:
-  • .specify/templates/plan-template.md: ✅ footer updated to v1.1.0 and correct path
+  • .specify/templates/plan-template.md: ✅ updated to v1.3.0
   • .specify/templates/spec-template.md: ✅ no change needed
   • .specify/templates/tasks-template.md: ✅ no change needed
 - Follow-up TODOs: none
@@ -78,6 +78,53 @@ Rules:
 Rationale: MSSQL option allows scaling project data volume and concurrency while retaining
 user‑owned local configuration and offline introspection.
 
+## Database Connections and Routing
+
+### Connection Lifecycle Policies
+- SQLite:
+  - Open one primary connection on project load; enable PRAGMA foreign_keys=ON, journal_mode=WAL, and prefer synchronous=NORMAL.
+  - Keep the primary connection open for the project lifetime; reopen on failure; close on project close/switch.
+  - Create short-lived, read-only auxiliary connections only when high-concurrency read workloads demand it.
+- MSSQL (Azure SQL):
+  - Acquire a new connection per operation/transaction and close it immediately; rely on driver pooling for performance.
+  - Default timeout: 30s. Implement exponential backoff retries for transient errors (e.g., 40501, 40613, 40197, 49918–49920). Never retry authentication/authorization errors (e.g., FA004) or permission denials.
+  - Azure AD: prefer Interactive or Integrated sign-in; avoid ROPC except when explicitly approved. Do not auto-prompt users except on explicit connect/test actions or when a reconnect is required.
+
+### Azure AD Authentication Token Management
+- Authentication Context Caching:
+  - Authenticate Azure AD Interactive connections ONLY in the main UI thread to enable browser window display.
+  - Cache authentication tokens/context per connection descriptor (server + database + auth_type + username) for session reuse.
+  - Background database operations MUST reuse cached authentication context; never attempt fresh Azure AD Interactive authentication in background threads.
+  - Token cache is session-scoped (in-memory only); cleared on application restart or explicit user logout.
+- Token Lifecycle:
+  - Initial authentication during project opening stores tokens with conservative 1-hour expiration assumption.
+  - Automatic token expiration detection with graceful degradation: clear cache and prompt user to reopen project for re-authentication.
+  - Authentication failures (0x534, token expiration) trigger cache invalidation and user-friendly error messages directing re-authentication.
+- Thread Safety:
+  - Token manager operations are thread-safe with internal locking.
+  - Main thread authentication flow ensures browser windows can be displayed for Interactive mode.
+  - Background threads receive pre-authenticated connection strings without triggering new authentication flows.
+- Error Handling:
+  - Authentication errors provide actionable user guidance (e.g., "Please close and reopen the project to re-authenticate").
+  - Distinguish between transient network errors (retry) and authentication failures (cache clear + user action required).
+  - Never silently fail or hang on authentication issues; always provide clear user feedback and remediation steps.
+Rationale: Azure AD Interactive authentication requires main thread execution for browser windows, but database operations must remain off the UI thread for responsiveness. Token caching bridges this architectural requirement while following Microsoft OAuth 2.0 best practices used by Visual Studio and Azure Data Studio.
+
+### Global Access Boundary (Gateway)
+- All database interactions MUST go through a DatabaseGateway facade. Direct use of sqlite3, pyodbc, or driver-specific clients elsewhere in the codebase is prohibited.
+- The gateway responsibilities:
+  - Backend selection based on the active project descriptor (sqlite | mssql).
+  - Uniform APIs: execute(), query_one(), query_all(), and transaction() with `?` parameter placeholders.
+  - Unified error taxonomy and mapping; observability (op, backend, duration, row count, outcome) with structured logs.
+  - Threading: perform DB I/O off the UI thread; enforce timeouts; surface actionable errors.
+
+### Multi-Database Behavior
+- Backend choice is per project according to Dual Storage Architecture. No cross-backend writes within a single logical operation; distributed transactions are forbidden.
+- No implicit fallback from MSSQL to SQLite for the same project once Remote Mode is established.
+
+### Testing
+- Provide a fake/in-memory SQLite backend for unit tests. MSSQL integration tests are optional and gated behind environment flags.
+
 ## Technology, Workflow, and Compliance Overview
 - Runtime & Tech Constraints:
   • Python 3.13 (Windows). Public APIs typed. stdlib logging (plain/JSON). Avoid global mutable state
@@ -143,4 +190,4 @@ Amendment PR requirements:
 Reviews must verify strict compliance before merge. Violations discovered post‑merge trigger an
 immediate corrective issue.
 
-**Version**: 1.1.0 | **Ratified**: 2025-09-15 | **Last Amended**: 2025-09-19
+**Version**: 1.3.0 | **Ratified**: 2025-09-15 | **Last Amended**: 2025-09-20

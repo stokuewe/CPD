@@ -11,9 +11,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QProgressDialog,
     QMenu,
+    QMenuBar,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint
-from PySide6.QtGui import QPalette
+from PySide6.QtGui import QPalette, QAction
 
 
 class MainWindow(QMainWindow):
@@ -30,6 +31,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("CPD - Common Project Database")
         self._controller = None
 
+        # Menu bar
+        self._build_menu()
+
         # Central layout
         central = QWidget(self)
         self.setCentralWidget(central)
@@ -45,9 +49,11 @@ class MainWindow(QMainWindow):
         btn_row = QHBoxLayout()
         self.btn_open = QPushButton("Open Project")
         self.btn_create = QPushButton("Create Project")
+        self.btn_close = QPushButton("Close Project")
         self.btn_clear = QPushButton("Clear Recent")
         btn_row.addWidget(self.btn_open)
         btn_row.addWidget(self.btn_create)
+        btn_row.addWidget(self.btn_close)
         btn_row.addWidget(self.btn_clear)
         root.addLayout(btn_row)
 
@@ -66,6 +72,7 @@ class MainWindow(QMainWindow):
         # Disable actions until wired by controller
         self.btn_open.setEnabled(True)
         self.btn_create.setEnabled(True)
+        self.btn_close.setEnabled(False)  # Disabled until project is open
         self.btn_clear.setEnabled(True)
 
     # Wiring ---------------------------------------------------------
@@ -78,6 +85,19 @@ class MainWindow(QMainWindow):
             self.btn_create.clicked.connect(controller.on_create_clicked)
         if hasattr(controller, "on_clear_recent_clicked"):
             self.btn_clear.clicked.connect(controller.on_clear_recent_clicked)
+        if hasattr(controller, "on_close_project_clicked"):
+            self.btn_close.clicked.connect(controller.on_close_project_clicked)
+        # Menu actions
+        if hasattr(controller, "on_settings_clicked") and hasattr(self, "act_settings"):
+            try:
+                self.act_settings.triggered.connect(controller.on_settings_clicked)
+            except Exception:
+                pass
+        if hasattr(controller, "on_close_project_clicked") and hasattr(self, "act_close_project"):
+            try:
+                self.act_close_project.triggered.connect(controller.on_close_project_clicked)
+            except Exception:
+                pass
         # Allow opening recent items by double-click or Enter
         if hasattr(controller, "on_recent_activated"):
             try:
@@ -147,7 +167,7 @@ class MainWindow(QMainWindow):
             self.progress_dialog.setWindowTitle("Please wait")
             self.progress_dialog.setAutoClose(False)
             self.progress_dialog.setMinimumDuration(0)
-            self.progress_dialog.setModal(True)
+            self.progress_dialog.setModal(False)  # Non-modal to allow event processing
         self.progress_dialog.show()
 
     def stop_busy(self) -> None:  # pragma: no cover - exercised via integration test
@@ -159,6 +179,10 @@ class MainWindow(QMainWindow):
         if self.progress_dialog is not None:
             self.progress_dialog.hide()
             # Keep instance for potential reuse to avoid flicker; test checks visibility
+
+    def is_busy(self) -> bool:  # pragma: no cover - exercised via integration test
+        """Check if the UI is currently in busy state"""
+        return self._busy
 
     def _on_recent_context_menu(self, pos: QPoint) -> None:  # pragma: no cover - UI interaction
         if not self._controller:
@@ -177,4 +201,27 @@ class MainWindow(QMainWindow):
             self._controller.on_recent_activated(path)
         elif act_remove and chosen is act_remove and hasattr(self._controller, "on_recent_remove"):
             self._controller.on_recent_remove(path)
+
+    def _build_menu(self) -> None:
+        try:
+            mb: QMenuBar = self.menuBar()
+
+            # File menu
+            menu_file = mb.addMenu("&File")
+            self.act_close_project = QAction("&Close Project", self)
+            self.act_close_project.setEnabled(False)  # Disabled until project is open
+            menu_file.addAction(self.act_close_project)
+
+            # Settings menu
+            menu_settings = mb.addMenu("&Settings")
+            self.act_settings = QAction("&Settings...", self)
+            menu_settings.addAction(self.act_settings)
+        except Exception:
+            pass
+
+    def set_project_open_state(self, is_open: bool) -> None:
+        """Update UI to reflect whether a project is currently open"""
+        self.btn_close.setEnabled(is_open)
+        if hasattr(self, "act_close_project"):
+            self.act_close_project.setEnabled(is_open)
 

@@ -121,8 +121,12 @@ def map_exception(exc: BaseException) -> str:
         if "0x534" in mlow:
             return (
                 "Azure AD (interactive) authentication failed (code 0x534). "
-                "Ensure you signed into the correct tenant and that your AAD user has access to the database. "
-                "Ask an admin to CREATE USER FROM EXTERNAL PROVIDER and assign roles. Share the correlation Id with your admin."
+                "This is a known issue with ODBC Driver 18. Possible solutions:\n"
+                "1. Ensure port 1433 is open in your firewall\n"
+                "2. Try using ODBC Driver 17 instead of Driver 18\n"
+                "3. Verify your AAD user has database access (CREATE USER FROM EXTERNAL PROVIDER)\n"
+                "4. Check if MSAL (Microsoft Authentication Library) is properly installed\n"
+                "Share the correlation ID with your admin if the issue persists."
             )
         return (
             "Azure AD authentication failed. Complete the sign-in prompt and verify your account has access; "
