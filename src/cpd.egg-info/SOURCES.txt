@@ -1,5 +1,13 @@
+README.md
 pyproject.toml
 src/__init__.py
+src/app/__init__.py
+src/app/main_window.py
+src/app/run.py
+src/app/controllers/__init__.py
+src/app/controllers/startup_controller.py
+src/app/dialogs/__init__.py
+src/app/dialogs/mssql_connection_dialog.py
 src/cpd.egg-info/PKG-INFO
 src/cpd.egg-info/SOURCES.txt
 src/cpd.egg-info/dependency_links.txt
@@ -8,3 +16,12 @@ src/cpd.egg-info/top_level.txt
 src/lib/__init__.py
 src/lib/paths.py
 src/lib/redaction.py
+src/services/__init__.py
+src/services/logging_model.py
+src/services/migration_runner.py
+src/services/mssql_connection.py
+src/services/project_creator_local.py
+src/services/project_creator_remote.py
+src/services/project_loader.py
+src/services/recent_projects.py
+src/services/settings_store.py

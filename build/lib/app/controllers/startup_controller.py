@@ -126,36 +126,23 @@ class StartupController:
                     try:
                         import sqlite3
                         with sqlite3.connect(fname) as conn:
-                            # Store storage mode
-                            conn.execute("INSERT OR REPLACE INTO settings(key, value) VALUES('storage_mode', 'mssql')")
-                            # Store descriptor keys generically in settings (no passwords)
-                            server = (desc.get('server') or '')
-                            database = (desc.get('database') or '')
-                            auth_type = (desc.get('auth_type') or 'windows').lower()
-                            port = desc.get('port') if isinstance(desc.get('port'), int) else 1433
-                            username = desc.get('username') or ''
-                            authority = desc.get('authority') or ''
-                            kvs = [
-                                ('remote_server', server),
-                                ('remote_database', database),
-                                ('remote_port', str(port)),
-                                ('remote_auth_type', auth_type),
-                                ('remote_username', username),
-                                ('remote_authority', authority),
-                            ]
-                            for k, v in kvs:
-                                conn.execute("INSERT OR REPLACE INTO settings(key, value) VALUES(?, ?)", (k, v))
-                            # Persist to mssql_connection ONLY for allowed auth types per schema ('sql','windows')
-                            if auth_type in ('sql', 'windows'):
-                                uname_for_row = username if auth_type == 'sql' else None
-                                conn.execute(
-                                    """
-                                    INSERT OR REPLACE INTO mssql_connection
-                                      (id, server, database, port, auth_type, username, password)
-                                    VALUES (1, ?, ?, ?, ?, ?, NULL)
-                                    """,
-                                    (server, database, port, auth_type, uname_for_row),
-                                )
+                            conn.execute(
+                                "INSERT OR REPLACE INTO settings(key, value) VALUES('storage_mode', 'mssql')"
+                            )
+                            # mssql_connection singleton row (id=1)
+                            server = desc.get("server", "")
+                            database = desc.get("database", "")
+                            auth_type = (desc.get("auth_type") or "windows").lower()
+                            port = desc.get("port") if isinstance(desc.get("port"), int) else 1433
+                            username = desc.get("username") if auth_type == "sql" else None
+                            conn.execute(
+                                """
+                                INSERT OR REPLACE INTO mssql_connection
+                                  (id, server, database, port, auth_type, username, password)
+                                VALUES (1, ?, ?, ?, ?, ?, NULL)
+                                """,
+                                (server, database, port, auth_type, username),
+                            )
                             conn.commit()
                     except Exception as persist_exc:
                         # Show a warning but keep the project file created; user can retry settings save

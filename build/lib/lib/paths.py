@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+
 _APP_DIR_NAME = "CPD"
 _RECENT_LIST_FILENAME = "recent_projects.json"
 
@@ -39,3 +40,20 @@ def recent_projects_path() -> Path:
     """Return the full path to the recent projects list JSON file."""
     return ensure_user_app_data_dir() / _RECENT_LIST_FILENAME
 
+
+def is_unc_path(p: str | os.PathLike[str]) -> bool:
+    """Return True if the given path string is a UNC path (\\\\server\\share...)."""
+    s = str(p)
+    return s.startswith("\\\\")
+
+
+def normalize_project_path(p: str | os.PathLike[str]) -> str:
+    """Normalize a project path for comparisons and storage.
+
+    - Expands user (~)
+    - Makes absolute (without requiring the path to exist)
+    - Normalizes case on Windows (via os.path.normcase)
+    """
+    # Resolve without requiring existence; Path.resolve(strict=False) keeps symlinks if any
+    abs_path = Path(p).expanduser().resolve(strict=False)
+    return os.path.normcase(str(abs_path))
